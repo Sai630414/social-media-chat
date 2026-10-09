@@ -15,9 +15,9 @@ try {
     const onListening = () => { server.off('error', onError); resolve(); };
     server.once('error', onError);
     server.once('listening', onListening);
-    server.listen(env.PORT, '0.0.0.0');
+    server.listen(env.PORT || 5000, '0.0.0.0');
   });
-  logger.info({ port: env.PORT }, 'server listening');
+  logger.info({ port: env.PORT || 5000 }, 'server listening');
 
   let shutdownPromise;
   const shutdown = (signal) => {

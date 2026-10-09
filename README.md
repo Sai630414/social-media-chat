@@ -49,6 +49,12 @@ Do not bake MongoDB, Supabase server, or Cloudinary secrets into the image or pa
 
 The health check is database readiness: it returns `503` until MongoDB is connected. Use a single deployment replica unless Socket.IO is configured with a shared adapter and compatible sticky-session/proxy behavior. The current app does not configure the Redis adapter automatically. Configure `TRUST_PROXY_HOPS` to match the hosting proxy chain so Express rate limits real client IPs; do not blindly trust arbitrary forwarded headers.
 
+## Deploy backend to Render and frontend to Netlify
+
+The root `render.yaml` defines only the Node API/Socket.IO web service. Keep the Render Root Directory blank (the repository root), use Build Command `npm install`, and Start Command `npm run start --workspace=server`. The backend is plain JavaScript and has no build step. The root `netlify.toml` separately builds the `client` workspace and publishes `client/dist` as a static site.
+
+In Netlify, set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL` (`https://<your-render-service>.onrender.com/api/v1`), and `VITE_SOCKET_URL` (`https://<your-render-service>.onrender.com`) as build environment variables, then redeploy the frontend. In Supabase, set the Site URL and auth redirect URLs to the Netlify origin. The current backend media implementation uses Cloudinary; it does not use Cloudflare R2, despite the older storage package dependencies.
+
 ## Supabase setup
 
 In the Supabase dashboard, enable Email authentication and choose whether sign-up requires email confirmation. Set the site URL and allowed redirect URLs to the client origin (for local development, `http://localhost:5173`). Enable Google under Authentication → Providers and add the OAuth client ID/secret from Google Cloud there. The browser uses Supabase's publishable/anon key. The server validates the bearer token against Supabase and never accepts a client-supplied user ID as identity.
