@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 export function canViewProfile({ isPrivate, self, following, blocked }) { if (blocked) return 'blocked'; if (isPrivate && !self && !following) return 'private'; return 'full'; }
 export function isConversationMember(participantIds, userId) { return participantIds.some((id) => String(id) === String(userId)); }
 export async function canAccessPost(userId, post, { Follow, Block, User }) {
@@ -14,5 +16,5 @@ export async function canAccessPost(userId, post, { Follow, Block, User }) {
 export async function canAccessConversation(userId, conversationId, { Conversation, Block }) {
   const conversation = await Conversation.findOne({ _id: conversationId, participants: userId }).select('participants');
   if (!conversation) return false;
-  return !await Block.exists({ $or: [{ blocker: userId, blocked: { $in: conversation.participants } }, { blocked: userId, blocker: { $in: conversation.participants } }] });
+  return !await Block.exists({ $or: [{ blocker: userId, blocked: mongoose.trusted({ $in: conversation.participants }) }, { blocked: userId, blocker: mongoose.trusted({ $in: conversation.participants }) }] });
 }
