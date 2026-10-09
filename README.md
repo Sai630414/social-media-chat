@@ -10,7 +10,7 @@ Circles is a JavaScript monorepo with a Vite/React client and an Express/Mongoos
 
 ## Run locally
 
-Requirements: Node.js 20+, npm, a MongoDB Atlas database, a Supabase project, and (for uploads) a Cloudinary account.
+Requirements: Node.js 20.19+ (or Node.js 22), npm, a MongoDB Atlas database, a Supabase project, and (for uploads) a Cloudinary account.
 
 1. Copy `client/.env.example` to `client/.env` and `server/.env.example` to `server/.env`.
 2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL` in the client file. These are public browser values; never put a service-role or Cloudinary secret in the client file.
@@ -21,6 +21,33 @@ Requirements: Node.js 20+, npm, a MongoDB Atlas database, a Supabase project, an
 The server exits on startup when required MongoDB or Supabase verification settings are missing. Cloudinary is optional for text-only development; media endpoints return `503` until Cloudinary is configured.
 
 Run the included access-policy and validation tests with `npm test`.
+
+## Deploy with Docker
+
+The root `Dockerfile` builds the React client and runs it with the API and Socket.IO server in one Node 22 container. The container runs as a non-root user, exposes port `4000` by default, and provides a readiness health check at `/api/v1/health`. The built frontend uses same-origin API and socket URLs unless `VITE_API_URL` or `VITE_SOCKET_URL` is overridden during the build.
+
+Build the image with the public Supabase browser settings (the anon/publishable key is intended for browser use and must be protected by Supabase RLS policies):
+
+```sh
+docker build \
+  --build-arg VITE_SUPABASE_URL=https://<project-ref>.supabase.co \
+  --build-arg VITE_SUPABASE_ANON_KEY=<supabase-publishable-or-anon-key> \
+  -t circles:latest .
+```
+
+Set these runtime environment variables in the deployment platform's secret/configuration settings:
+
+- `NODE_ENV=production`
+- `PORT` (use the port assigned by the platform, if it provides one)
+- `CLIENT_URL` (the exact HTTPS origin serving the client; comma-separated origins are supported)
+- `TRUST_PROXY_HOPS` (set to the number of trusted reverse proxies in front of the app; common single-proxy platforms use `1`)
+- `MONGODB_URI`
+- `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
+
+Do not bake MongoDB, Supabase server, or Cloudinary secrets into the image or pass them as Docker build arguments. Keep `SUPABASE_SERVICE_ROLE_KEY` unset unless a trusted server feature specifically needs it. If hosting the client separately, build with `VITE_API_URL=https://<api-host>/api/v1` and `VITE_SOCKET_URL=https://<api-host>`, allow the client origin in `CLIENT_URL`, and configure the proxy to pass WebSocket upgrades. Configure the Supabase Site URL and redirect URLs to the deployed client origin and use HTTPS at the hosting edge.
+
+The health check is database readiness: it returns `503` until MongoDB is connected. Use a single deployment replica unless Socket.IO is configured with a shared adapter and compatible sticky-session/proxy behavior. The current app does not configure the Redis adapter automatically. Configure `TRUST_PROXY_HOPS` to match the hosting proxy chain so Express rate limits real client IPs; do not blindly trust arbitrary forwarded headers.
 
 ## Supabase setup
 
