@@ -2,14 +2,13 @@
   - type: web
     name: circles-api
     runtime: node
+    rootDir: .
     buildCommand: npm install
     startCommand: npm run start --workspace=server
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: "10000"
       - key: TRUST_PROXY_HOPS
         value: "1"
       - key: CLIENT_URL
