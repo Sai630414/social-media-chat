@@ -1,0 +1,17 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { Report } from '../models/Report.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
+import { User } from '../models/User.js';
+import { AuditLog } from '../models/AuditLog.js';
+import { Post } from '../models/Post.js';
+import { HttpError } from '../utils/httpError.js';
+const router = Router();
+router.post('/', asyncHandler(async (req, res) => { const data = z.object({ targetType: z.enum(['user','post','comment','message']), target: z.string().regex(/^[a-f\d]{24}$/i), reason: z.string().trim().min(5).max(500) }).parse(req.body); const report = await Report.create({ ...data, reporter: req.auth.user.id }); res.status(201).json({ report }); }));
+router.get('/admin/reports', requireAdmin, asyncHandler(async (req, res) => { const reports = await Report.find({ status: req.query.status || 'open' }).sort({ createdAt: -1 }).limit(50).populate('reporter', 'username').populate('reviewedBy', 'username'); res.json({ reports }); }));
+router.get('/admin/users', requireAdmin, asyncHandler(async (req, res) => { const q = String(req.query.q || '').trim().slice(0, 60); const filter = q ? { $or: [{ username: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }, { displayName: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }] } : {}; const users = await User.find(filter).select('username displayName avatar role status createdAt').sort({ createdAt: -1 }).limit(50); res.json({ users }); }));
+router.get('/admin/stats', requireAdmin, asyncHandler(async (req, res) => { const [users, posts, reports, openReports, logs] = await Promise.all([User.countDocuments(), Post.countDocuments(), Report.countDocuments(), Report.countDocuments({ status: 'open' }), AuditLog.find().sort({ createdAt: -1 }).limit(20).populate('actor', 'username')]); res.json({ stats: { users, posts, reports, openReports }, logs }); }));
+router.patch('/admin/users/:id/status', requireAdmin, asyncHandler(async (req, res) => { const status = z.enum(['active','suspended']).parse(req.body.status); const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true, select: 'username status' }); if (!user) throw new HttpError(404, 'User not found.'); await AuditLog.create({ actor: req.auth.user.id, action: `user.${status}`, targetType: 'user', target: user.id }); res.json({ user }); }));
+router.patch('/admin/reports/:id', requireAdmin, asyncHandler(async (req, res) => { const status = z.enum(['reviewing','resolved','dismissed']).parse(req.body.status); const report = await Report.findByIdAndUpdate(req.params.id, { status, reviewedBy: req.auth.user.id }, { new: true }); if (!report) throw new HttpError(404, 'Report not found.'); await AuditLog.create({ actor: req.auth.user.id, action: `report.${status}`, targetType: report.targetType, target: report.target }); res.json({ report }); }));
+export default router;

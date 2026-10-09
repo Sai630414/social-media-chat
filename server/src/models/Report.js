@@ -1,0 +1,3 @@
+import mongoose from 'mongoose';
+const schema = new mongoose.Schema({ reporter: { type: mongoose.Types.ObjectId, ref: 'User', required: true }, targetType: { type: String, enum: ['user', 'post', 'comment', 'message'], required: true }, target: { type: mongoose.Types.ObjectId, required: true }, reason: { type: String, maxlength: 500, required: true }, status: { type: String, enum: ['open', 'reviewing', 'resolved', 'dismissed'], default: 'open' }, reviewedBy: { type: mongoose.Types.ObjectId, ref: 'User' } }, { timestamps: true }); schema.index({ status: 1, createdAt: -1 });
+export const Report = mongoose.model('Report', schema);

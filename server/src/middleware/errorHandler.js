@@ -1,0 +1,1 @@
+export function errorHandler(error, req, res, next) { const status = error.status || 500; req.log?.[status >= 500 ? 'error' : 'warn']({ err: error, path: req.path }, 'request failed'); res.status(status).json({ error: { code: error.code || 'INTERNAL_ERROR', message: status >= 500 ? 'Something went wrong.' : error.message } }); }

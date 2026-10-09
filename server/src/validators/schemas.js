@@ -1,0 +1,4 @@
+import { z } from 'zod';
+export const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid identifier.');
+export const postInput = z.object({ caption: z.string().max(3000).default(''), media: z.array(z.object({ type: z.enum(['image', 'video']), key: z.string().min(8), url: z.string().optional(), mimeType: z.string().optional(), size: z.number().max(100 * 1024 * 1024).optional() })).max(10).default([]), visibility: z.enum(['public', 'followers']).default('public') });
+export const profileInput = z.object({ username: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,24}$/).optional(), displayName: z.string().trim().min(1).max(60).optional(), bio: z.string().max(300).optional(), website: z.string().max(200).refine((value) => /^https?:\/\//i.test(value), 'Website must use HTTP or HTTPS.').optional(), isPrivate: z.boolean().optional(), avatar: z.string().max(2000).optional(), coverImage: z.string().max(2000).optional() });

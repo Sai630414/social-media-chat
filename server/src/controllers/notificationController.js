@@ -1,0 +1,5 @@
+import { Notification } from '../models/Notification.js';
+import { HttpError } from '../utils/httpError.js';
+export async function listNotifications(req, res) { const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1); const [notifications, unread] = await Promise.all([Notification.find({ recipient: req.auth.user.id }).sort({ createdAt: -1 }).skip((page - 1) * 30).limit(30).populate('actor', 'username displayName avatar'), Notification.countDocuments({ recipient: req.auth.user.id, readAt: null })]); res.json({ notifications, unread, page, hasMore: notifications.length === 30 }); }
+export async function readNotification(req, res) { const notification = await Notification.findOneAndUpdate({ _id: req.params.id, recipient: req.auth.user.id }, { $set: { readAt: new Date() } }, { new: true }); if (!notification) throw new HttpError(404, 'Notification not found.'); res.json({ notification }); }
+export async function readAll(req, res) { await Notification.updateMany({ recipient: req.auth.user.id, readAt: null }, { $set: { readAt: new Date() } }); res.json({ status: 'read' }); }

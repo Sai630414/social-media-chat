@@ -1,0 +1,4 @@
+import { useEffect, useState } from 'react';
+import { api } from '../services/api.js';
+import PostCard from '../components/PostCard.jsx';
+export default function BookmarksPage() { const [posts, setPosts] = useState([]); const [error, setError] = useState(''); useEffect(() => { api.get('/posts/bookmarks').then(({ data }) => setPosts(data.posts)).catch((e) => setError(e.message)); }, []); return <section className="page-narrow"><div className="page-heading"><div><span className="eyebrow">KEEP THE GOOD ONES</span><h1>Bookmarks</h1><p>Posts you wanted to come back to.</p></div></div>{error && <div className="error-banner">{error}</div>}{posts.length ? <div className="post-list">{posts.map((post) => <PostCard key={post._id} post={post}/>)}</div> : <div className="empty-state card"><span className="empty-icon">✧</span><h3>Save something for later</h3><p>Tap the bookmark on a post and it’ll be waiting here.</p></div>}</section>; }

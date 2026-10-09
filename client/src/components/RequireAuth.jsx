@@ -1,0 +1,3 @@
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
+export default function RequireAuth() { const { session, profile, loading } = useAuth(); const location = useLocation(); if (loading) return <div className="screen-center"><span className="spinner"/></div>; if (!session) return <Navigate to="/login" replace/>; if (profile && !profile.onboardingComplete && location.pathname !== '/onboarding') return <Navigate to="/onboarding" replace/>; if (profile?.onboardingComplete && location.pathname === '/onboarding') return <Navigate to="/" replace/>; return <Outlet/>; }

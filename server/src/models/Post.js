@@ -1,0 +1,3 @@
+import mongoose from 'mongoose';
+const schema = new mongoose.Schema({ author: { type: mongoose.Types.ObjectId, ref: 'User', required: true, index: true }, caption: { type: String, maxlength: 3000, default: '' }, media: [{ type: { type: String, enum: ['image', 'video'], required: true }, key: { type: String, required: true }, url: String, mimeType: String, size: Number }], visibility: { type: String, enum: ['public', 'followers'], default: 'public' }, hashtags: [String], mentions: [{ type: mongoose.Types.ObjectId, ref: 'User' }] }, { timestamps: true }); schema.index({ author: 1, createdAt: -1 }); schema.index({ hashtags: 1, createdAt: -1 });
+export const Post = mongoose.model('Post', schema);
