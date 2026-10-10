@@ -11,6 +11,25 @@ import { Media } from '../models/Media.js';
 
 export async function getMe(req, res) { res.json({ user: req.auth.user }); }
 export async function getFollowing(req, res) { const follows = await Follow.find({ follower: req.auth.user.id }).sort({ createdAt: -1 }).select('following'); const blocked = await Block.find({ $or: [{ blocker: req.auth.user.id }, { blocked: req.auth.user.id }] }).select('blocker blocked'); const blockedIds = blocked.map((item) => String(item.blocker) === String(req.auth.user.id) ? item.blocked : item.blocker); const users = await User.find({ _id: mongoose.trusted({ $in: follows.map((item) => item.following), $nin: blockedIds }), status: 'active' }).select('username displayName avatar'); const byId = new Map(users.map((user) => [String(user.id), user])); res.json({ users: follows.map((item) => byId.get(String(item.following))).filter(Boolean) }); }
+export async function getConnections(req, res) {
+	const { username, type } = req.params;
+	if (!['followers', 'following'].includes(type)) throw new HttpError(404, 'Connection list not found.');
+	const user = await User.findOne({ username, status: 'active' }).select('_id isPrivate');
+	if (!user) throw new HttpError(404, 'Profile not found.');
+	const viewerId = req.auth.user.id;
+	const blocked = await Block.find({ $or: [{ blocker: viewerId }, { blocked: viewerId }] }).select('blocker blocked');
+	const blockedIds = blocked.map((item) => String(item.blocker) === String(viewerId) ? item.blocked : item.blocker);
+	if (blockedIds.some((id) => String(id) === String(user.id))) throw new HttpError(404, 'Profile not found.');
+	const self = String(user.id) === String(viewerId);
+	const follows = await Follow.exists({ follower: viewerId, following: user.id });
+	if (user.isPrivate && !self && !follows) throw new HttpError(403, 'Follow this account to view its connections.');
+	const relation = type === 'followers' ? 'follower' : 'following';
+	const followRecords = await Follow.find({ [type === 'followers' ? 'following' : 'follower']: user.id }).sort({ createdAt: -1 }).select(relation);
+	const ids = followRecords.map((record) => record[relation]);
+	const users = await User.find({ _id: mongoose.trusted({ $in: ids, $nin: blockedIds }), status: 'active' }).select('username displayName avatar');
+	const byId = new Map(users.map((item) => [String(item.id), item]));
+	res.json({ users: ids.map((id) => byId.get(String(id))).filter(Boolean) });
+}
 export async function updateMe(req, res) { const changes = profileInput.parse(req.body); if (changes.username) { const existing = await User.findOne({ username: changes.username }).select('_id'); if (existing && String(existing.id) !== String(req.auth.user.id)) throw new HttpError(409, 'That username is already taken.', 'USERNAME_TAKEN'); } for (const field of ['avatar', 'coverImage']) if (changes[field]) { const key = changes[field].startsWith('cloudinary:') ? changes[field].slice(11) : ''; const purpose = field === 'avatar' ? 'avatar' : 'cover'; if (!key || !await Media.exists({ key, owner: req.auth.user.id, purpose, status: 'complete' })) throw new HttpError(400, `${field} must reference a completed Cloudinary upload owned by your account.`); changes[field] = `cloudinary:${key}`; } const user = await User.findByIdAndUpdate(req.auth.user.id, { $set: changes }, { new: true, runValidators: true }); res.json({ user }); }
 export async function completeOnboarding(req, res) { const changes = profileInput.pick({ username: true, displayName: true, bio: true, isPrivate: true }).required({ username: true, displayName: true }).parse(req.body); const existing = await User.findOne({ username: changes.username }).select('_id'); if (existing && String(existing.id) !== String(req.auth.user.id)) throw new HttpError(409, 'That username is already taken.', 'USERNAME_TAKEN'); const user = await User.findByIdAndUpdate(req.auth.user.id, { $set: { ...changes, onboardingComplete: true } }, { new: true, runValidators: true }); res.json({ user }); }
 export async function searchUsers(req, res) { const q = String(req.query.q || '').trim().slice(0, 60); if (!q) return res.json({ users: [] }); const users = await User.find({ status: 'active', $or: [{ username: mongoose.trusted({ $regex: escape(q), $options: 'i' }) }, { displayName: mongoose.trusted({ $regex: escape(q), $options: 'i' }) }] }).select('username displayName avatar bio').limit(20); res.json({ users }); }

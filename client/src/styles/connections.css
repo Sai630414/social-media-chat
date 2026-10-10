@@ -1,0 +1,16 @@
+.profile-stat-button{padding:0;border:0;background:transparent;color:inherit;font-size:inherit}
+.profile-stat-button:hover{color:#6659d3}
+.connections-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:#20212a66}
+.connections-dialog{width:min(100%,430px);max-height:min(80vh,620px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border:1px solid #ececf2;border-radius:12px;box-shadow:0 20px 60px #17172133}
+.connections-header{display:flex;align-items:center;justify-content:space-between;padding:14px 17px;border-bottom:1px solid #eeeef3}
+.connections-header h2{margin:0;font:700 16px Manrope,sans-serif;color:#303444}
+.connections-list{overflow-y:auto;padding:4px 14px}
+.connection-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid #f0f0f4}
+.connection-row:last-child{border-bottom:0}
+.connection-profile{display:flex;align-items:center;gap:10px;min-width:0}
+.connection-profile>span{display:grid;gap:3px;min-width:0}
+.connection-profile b{overflow:hidden;color:#343949;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.connection-profile small{color:#9297a6;font-size:10px}
+.connection-unfollow{flex:none;min-height:33px;padding:0 10px;font-size:10px}
+.connections-message{padding:23px 8px;text-align:center;color:#9297a6;font-size:12px}
+@media(max-width:760px){.connections-backdrop{padding:12px}.connections-dialog{max-height:calc(100dvh - 24px)}}
